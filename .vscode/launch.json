@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "FastAPI debugger",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "cwd": "${workspaceFolder}",
+            "module": "uvicorn",
+            "args": [
+                "api.main:app",
+                "--reload"
+            ],
+            "jinja": false
+        },
+        {
+            "name": "debug scripts",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "cwd": "${workspaceFolder}",
+            "module": "src.debug",
+            "args": []
+        }
+    ]
+}

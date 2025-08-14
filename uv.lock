@@ -267,6 +267,7 @@ dependencies = [
     { name = "debugpy" },
     { name = "explainerdashboard" },
     { name = "fastapi" },
+    { name = "gower" },
     { name = "ipykernel" },
     { name = "ipywidgets" },
     { name = "joblib" },
@@ -286,6 +287,7 @@ requires-dist = [
     { name = "debugpy", specifier = ">=1.8.15" },
     { name = "explainerdashboard" },
     { name = "fastapi" },
+    { name = "gower", specifier = ">=0.1.2" },
     { name = "ipykernel" },
     { name = "ipywidgets" },
     { name = "joblib" },
@@ -559,6 +561,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/09/77/ca82b9c12fa4de3c520b7760ee61787640cf3fde55ef1b0bfe1de38c8153/fonttools-4.59.0-cp311-cp311-win32.whl", hash = "sha256:6770d7da00f358183d8fd5c4615436189e4f683bdb6affb02cad3d221d7bb757", size = 2214216, upload-time = "2025-07-16T12:04:03.515Z" },
     { url = "https://files.pythonhosted.org/packages/ab/25/5aa7ca24b560b2f00f260acf32c4cf29d7aaf8656e159a336111c18bc345/fonttools-4.59.0-cp311-cp311-win_amd64.whl", hash = "sha256:84fc186980231a287b28560d3123bd255d3c6b6659828c642b4cf961e2b923d0", size = 2261879, upload-time = "2025-07-16T12:04:05.015Z" },
     { url = "https://files.pythonhosted.org/packages/d0/9c/df0ef2c51845a13043e5088f7bb988ca6cd5bb82d5d4203d6a158aa58cf2/fonttools-4.59.0-py3-none-any.whl", hash = "sha256:241313683afd3baacb32a6bd124d0bce7404bc5280e12e291bae1b9bba28711d", size = 1128050, upload-time = "2025-07-16T12:04:52.687Z" },
+]
+
+[[package]]
+name = "gower"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7c/b8/f02ffa72009105e981b21fe957895107d1b3c81dece43167d28d8acfdfb0/gower-0.1.2.tar.gz", hash = "sha256:34ddb5158f0e8bfba093dca06b9f887bda244998d10af2a3ad8c74a6efa1b5f6", size = 5637, upload-time = "2022-11-13T20:23:20.493Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/99/23/88b526457ea992e0a47147a886db3d749d07347c8d3a303f6076deee7299/gower-0.1.2-py3-none-any.whl", hash = "sha256:cb46e18243e1d88d2fa0a23d20afb71e5469f25db4ee6236db40f897dfea9e6f", size = 5168, upload-time = "2022-11-13T20:23:18.387Z" },
 ]
 
 [[package]]

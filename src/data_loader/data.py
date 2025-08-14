@@ -91,6 +91,28 @@ def load_dataset(name, preprocess=False, include_description=False):
 
         if include_description:
             pprint(ADULT_COLUMN_DESCRIPTION)
+            
+        # Ensure specified columns are of type int if they exist
+        cols_to_int = [
+            "education_num",
+            "age",
+        ]
+        for col in cols_to_int:
+            X_proc[col] = X_proc[col].astype(int)
+                
+        # Convert columns to categorical
+        cols_to_cat = [
+            "workclass",
+            "marital_status",
+            "relationship",
+            "race",
+            "sex",
+            "native_country",
+            ]
+        
+        for col in cols_to_cat:
+            X_proc[col] = X_proc[col].astype('category')
+                
         return result
     elif name == "california_housing":
         ds = fetch_california_housing(as_frame=True)
