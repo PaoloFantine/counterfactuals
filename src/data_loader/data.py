@@ -111,7 +111,7 @@ def load_dataset(name, preprocess=False, include_description=False):
             ]
         
         for col in cols_to_cat:
-            X_proc[col] = X_proc[col].astype('category')
+            X_proc[col] = X_proc[col].astype("category")
                 
         return result
     elif name == "california_housing":

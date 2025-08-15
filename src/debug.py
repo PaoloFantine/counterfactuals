@@ -22,8 +22,10 @@ instance_outcome = y.iloc[0:1]
 
 ga = GA_counterfactuals(X=X_proc, y=y, model=model)
 
-ga.generate_counterfactuals(
+cf = ga.generate_counterfactuals(
     base=instance,
-    n_counterfactuals=10,
+    n_counterfactuals=5,
     desired_class=1,
     )
+
+cf

@@ -77,61 +77,103 @@ class GA_counterfactuals:
         # note down the base instance; needed for fitness evaluation
         self.base = base
         
+        if fix_vars is not None:
+            self.features_to_vary = list(set(self.X.columns) - set(fix_vars))
+        else:
+            self.features_to_vary = self.X.columns.tolist()
+        
         # initialize parents
         parents = self._initialize_parents(
             base=base,
             n_counterfactuals=n_counterfactuals,
-            fix_vars=fix_vars
         )
         
-        solutions = pd.DataFrame(columns=self.X.columns)
+        # Dataframe to track found solutions
+        solutions = pd.DataFrame(columns=list(self.X.columns) + ["outcome"])
         
-        # -- evaluate parents fitness
-        if self.problem_type == "classification":
-            parents['outcome'] = self.model.predict_proba(parents)[:, desired_class]
-        elif self.problem_type == "regression":
-            parents['outcome'] = self.model.predict(parents)
+        while len(solutions) < n_counterfactuals+0.5*n_counterfactuals:  # finding more counterfactuals than needed to allow for selection of the fittest ones     
+            # -- evaluate parents fitness
+            if self.problem_type == "classification":
+                parents['outcome'] = self.model.predict_proba(parents)[:, desired_class]
+                selected_parents = parents[parents['outcome'] > 0.5]
+            elif self.problem_type == "regression":
+                parents['outcome'] = self.model.predict(parents)
+                selected_parents = parents[
+                    (parents['outcome'] >= lower_limit) & (parents['outcome'] <= upper_limit)
+                ]
             
-        current_generation = self._evaluate_fitness(
-            current_generation=parents, 
-            desired_class=desired_class, 
-            lower_limit=lower_limit, 
-            upper_limit=upper_limit
-        )  
+            # track the counterfactuals generated so far
+            if not selected_parents.empty:
+                if solutions.empty:
+                    solutions = selected_parents.copy()
+                else:
+                    solutions = pd.concat([solutions, selected_parents], ignore_index=True)
+            
+            current_generation = self._evaluate_selection_probability(
+                parents=parents,
+                desired_class=desired_class,
+                lower_limit=lower_limit,
+                upper_limit=upper_limit,
+            )
         
-        check=0     
-              
+            # -- pair parents according to their selection probability
+            couples = [
+                npr.choice(
+                    list(range(len(current_generation.index))),
+                    2,
+                    p=list(current_generation.selection_probability),
+                    replace=False,
+                )
+                for i in range(len(current_generation.index))
+            ]
         
-        # -- pair parents randomly
+            children = []
         
-        # -- reproduction
+            # -- reproduction
+            for idx1, idx2 in couples:
+                parent1 = current_generation[self.X.columns].iloc[idx1]
+                parent2 = current_generation[self.X.columns].iloc[idx2]
+            
+                child = pd.DataFrame(index=[0], columns=self.X.columns)
+            
+                for col in self.X.columns:
+                    if parent1[col].dtype in ["int64", "int32", "object", "category"]:
+                        # for categorical or int values, choose the value of one of the parents
+                        # with equal probability
+                        child[col] = npr.choice(
+                            [parent1[col], parent2[col]], 1, p=[0.5, 0.5]
+                        )
+                    
+                    elif parent1[col].dtype in ["float64", "float32"]:
+                        # for float values, choose the average of the parents
+                        child[col] = (parent1[col] + parent2[col]) / 2
+                    
+            
+                # append the child to the list of children and allow for mutation to explore the feature space better       
+                children.append(self._data_mutation(child, self.features_to_vary))
+            
+            parents = pd.concat(children, ignore_index=True)
+            
+        solutions = self._evaluate_selection_probability(
+            parents=solutions,
+            desired_class=desired_class,
+            lower_limit=lower_limit,
+            upper_limit=upper_limit,
+        )
         
-        # -- evaluate fitness
-        
-        # -- select best parents
-        # -- -- rank based on nondominance+distance
-        
-        # stop when enough counterfactuals are generated
-        
-        # select best children
-        
-        # reproduce
-        pass
+        solutions = solutions.nlargest(n_counterfactuals, "selection_probability")
+            
+        return solutions[list(self.X.columns)+["outcome"]].reset_index(drop=True)
     
-    def _initialize_parents(self, base, n_counterfactuals, fix_vars):
+    def _initialize_parents(self, base, n_counterfactuals):
         '''
         Generate enough parents to start the evolution process from the base instance
         '''
 
-        if fix_vars is not None:
-            features_to_vary = list(set(self.X.columns) - set(fix_vars))
-        else:
-            features_to_vary = self.X.columns.tolist()
-
         # loop _data_mutation to have enough parents
         
         mutation_batch = pd.concat(
-            [self._data_mutation(to_be_mutated=base, features_to_vary=features_to_vary) for _ in range(2*n_counterfactuals)]
+            [self._data_mutation(to_be_mutated=base, features_to_vary=self.features_to_vary) for _ in range(2*n_counterfactuals)]
         )
         
         return mutation_batch
@@ -177,7 +219,7 @@ class GA_counterfactuals:
         
         # solution range
         # -- verify how close we are to the desired solution
-        current_generation = self._solution_fitness(
+        current_generation['outcome_fitness'] = self._solution_fitness(
             current_generation, 
             desired_class=desired_class, 
             lower_limit=lower_limit, 
@@ -186,14 +228,25 @@ class GA_counterfactuals:
         
         # point-likelihood
         # -- check how likely it is for the point to be in the feature space
-        current_generation = self._point_likelihood_fitness(current_generation)
+        current_generation['point_likelihood_fitness'] = self._point_likelihood_fitness(current_generation)
         
         # sparsity
         # -- check the amount of features changed is minimal
+        # len(self.X.columns) - count of features that have changed gives higher fitness for solutions that have changed the least features
+        current_generation["sparsity_fitness"] = len(self.X.columns) - current_generation[self.X.columns].apply(
+            lambda x: list(np.not_equal(x.values, self.base.values)[0]).count(
+                True
+            ),
+            axis=1,
+        )
         
         # closeness to base instance
         # -- check how close the mutated instance is to the base instance
-        pass
+        # 1 - gower distance to have higher fitness for solutions that are closer to the base instance
+        base_current = pd.concat([self.base, current_generation[self.X.columns]], axis=0, ignore_index=True)
+        current_generation["closeness_fitness"] = 1 - gower.gower_matrix(base_current)[0, 1:].mean()
+        
+        return current_generation.reset_index(drop=True)
     
     def _solution_fitness(
         self, 
@@ -208,11 +261,12 @@ class GA_counterfactuals:
         
         # check how close the solution is to the desired class/range
         if self.problem_type == "classification":
-            current_generation['outcome_fitness'] = abs(current_generation['outcome']- desired_class)
+            # 'outcome' is the predicted probability of the desired class, so the probability is the fitness in this case
+            outcome_fitness = current_generation['outcome']
         elif self.problem_type == "regression":
-            current_generation['outcome_fitness'] = np.min(abs(current_generation['outcome'] - lower_limit), abs(upper_limit - current_generation['outcome']))
+            outcome_fitness = np.min(abs(current_generation['outcome'] - lower_limit), abs(upper_limit - current_generation['outcome']))
             
-        return current_generation
+        return outcome_fitness
     
     def _point_likelihood_fitness(self, current_generation):
         """
@@ -228,7 +282,8 @@ class GA_counterfactuals:
         scaled_X = scaler.fit_transform(self.X)
         scaled_generation = scaler.transform(current_generation[self.X.columns])
         
-        # use KDTree to find closest points in the feature space
+        # use KDTree to find 5 closest points in the feature space
+        # 5 is rather arbitrary. One could experiment with different values to see how it affects speed and quality
         kd = KDTree(scaled_X)
         
         nearest_neighbors = [
@@ -236,16 +291,144 @@ class GA_counterfactuals:
             for i in range(len(scaled_generation))
         ]
         
-        gower = pd.DataFrame(
-            [
-                stats.gower_distance(current_generation.iloc[i], nearest_neighbors[i])
-                for i in range(len(current_generation))
+        # concatenate the points in current generation to their nearest neighbors
+        point_distribution_dfs = [pd.concat([current_generation[self.X.columns].iloc[i:i+1], nearest_neighbors[i]], axis=0, ignore_index=True) for i in range(len(current_generation))]
+        
+        # convert "category" columns to "object" to avoid gower distance errors
+        for i in range(len(point_distribution_dfs)):
+            for col in point_distribution_dfs[i].select_dtypes(include=["category"]).columns:
+                point_distribution_dfs[i][col] = point_distribution_dfs[i][col].astype("object")
+        
+        # find average gower distance between the current generation and its nearest neighbors
+        # The slicing [0, 1:] takes the row of the distance matrix corresponding to the current point in point_distribution_dfs [0]
+        # and its distances to the rest of te points [1:]; the diagonal of the distance matrix is identically 0
+        # Returning 1- gower distance because fitness is higher when the distance is lower
+        gower_distance = [1 - gower.gower_matrix(point_distribution_dfs[i])[0, 1:].mean() for i in range(len(point_distribution_dfs))]
+
+        
+        return gower_distance
+    
+    def _nondominance_sorting(self, current_fitness):
+        """
+        Determine non-dominance fronts in the current generation based on its individuals' fitness 
+        """
+        
+        # Establish dominance in the current generation
+        dominates = {i:[] for i in current_fitness.index}
+        dominated_by_count = {i:0 for i in current_fitness.index}
+        
+        for i in current_fitness.index:
+            for j in current_fitness.index:
+                # dominance is established by being fitter in at least one fitness metric and not worse in any metric
+                # fitness metrics are such that lower is worse so we check that at least one is higher and none is lower
+                if (list(current_fitness.iloc[i] > current_fitness.iloc[j]).count(True) > 0) and (list(current_fitness.iloc[i] < current_fitness.iloc[j]).count(True) == 0):
+                    # i dominates j
+                    # track the indices row i dominates
+                    dominates[i].append(j)
+                        
+                    # track how many solutions j is dominated by
+                    dominated_by_count[j] += 1
+    
+        # Assign domination fronts
+        front_counter=1  
+        current_fitness.loc[:, "front"] = 0     
+        while dominates:
+            # find indices dominating the current front (not dominated by any solution)
+            front_idx = [i for i in dominated_by_count.keys() if dominated_by_count[i] == 0]
+            
+            current_fitness.loc[front_idx, "front"] = front_counter
+            front_counter+=1
+            
+            # remove current front from further competition
+            reduce_dominated_by_count = [dominates[i] for i in front_idx]
+            reduce_dominated_by_count_flattened = [item for sublist in reduce_dominated_by_count for item in sublist]
+            
+            for i in reduce_dominated_by_count_flattened:
+                dominated_by_count[i] -= 1
+                
+            for idx in front_idx:
+                # remove dominated solutions from the current generation
+                del dominates[idx]
+                del dominated_by_count[idx]
+
+            
+        return current_fitness['front']
+    
+    def _crowding_distance(self, current_fitness):
+        """
+        calculate crowding distance of found solutions to encourage diversity
+        in selection across generations
+        """
+
+        fitness_metrics = current_fitness.copy()[
+            [col for col in current_fitness.columns if "_fitness" in col]
+        ]
+
+        for col in fitness_metrics.columns:
+
+            fitness_metrics = fitness_metrics.sort_values(col)
+
+            # in case the column has no variance (max=min) distance should amount to 0, not nan
+            # this also avoids a divide by 0
+            column_range = max(fitness_metrics[col]) - min(fitness_metrics[col])
+            if column_range == 0:
+                range_ = 1
+            else:
+                range_ = column_range
+
+            # partial crowding distance calculation:
+            distance = [
+                (fitness_metrics[col].iloc[i + 1] - fitness_metrics[col].iloc[i - 1])
+                / range_
+                for i in range(1, len(fitness_metrics.index) - 1)
             ]
+
+            column = np.zeros(len(fitness_metrics.index))
+            column[1:-1] = distance
+            column[0] = column[-1] = float("inf")
+            fitness_metrics[f"meta_{col}"] = column
+
+        # crowding distance calculation
+        current_fitness["crowding_distance"] = fitness_metrics[
+            [col for col in fitness_metrics.columns if col.startswith("meta_")]
+        ].sum(axis=1)
+
+        return current_fitness
+    
+    def _evaluate_selection_probability(self, parents, desired_class=None, lower_limit=None, upper_limit=None):
+        """
+        Evaluate the selection probability of the current generation
+        """
+        
+        current_generation = self._evaluate_fitness(
+                current_generation=parents, 
+                desired_class=desired_class, 
+                lower_limit=lower_limit, 
+                upper_limit=upper_limit
+            )  
+        
+        # -- Nondominance sorting    
+        current_generation['front'] = self._nondominance_sorting(current_generation[['outcome_fitness', 'point_likelihood_fitness', 'sparsity_fitness', 'closeness_fitness']].copy())
+        
+        # -- crowding distance
+        current_generation = self._crowding_distance(current_generation)
+        
+        # -- selection probability
+        # find combined overall ranking of nondominance+crowding distance
+        current_generation["crowding_rank"] = current_generation.crowding_distance.rank(
+            ascending=True, pct=True
+        )
+
+        # rank fronts by
+        current_generation["front_rank"] = current_generation["front"].rank(ascending=False, pct=True)
+
+        current_generation["combined_rank"] = 0.5*(
+            current_generation["front_rank"] + current_generation["crowding_rank"]
+        )
+
+        # compute reproduction probability
+        current_generation["selection_probability"] = current_generation["combined_rank"] / sum(
+            current_generation["combined_rank"]
         )
         
-        return gower.mean(axis=1).to_frame(name='point_likelihood_fitness')
-        
-    
-            
-            
-        
+        return current_generation.reset_index(drop=True)
