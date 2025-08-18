@@ -8,7 +8,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.datasets import fetch_california_housing, fetch_openml
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OrdinalEncoder
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
 
 ARTIFACT_DIR = Path("artifacts")
 ARTIFACT_DIR.mkdir(exist_ok=True)
@@ -85,6 +85,7 @@ def load_dataset(name, preprocess=False, include_description=False):
             # take care of naming
             X_proc.columns = X_proc.columns.str.replace("num__", "", regex=False)
             X_proc.columns = X_proc.columns.str.replace("cat__", "", regex=False)
+            X_proc.columns = X_proc.columns.str.replace("onehot__", "", regex=False)
             result = (X, X_proc, y)
         else:
             result = (X, None, y)
@@ -106,7 +107,8 @@ def load_dataset(name, preprocess=False, include_description=False):
             "marital_status",
             "relationship",
             "race",
-            "sex",
+            "sex_Female",
+            "sex_Male",
             "native_country",
             ]
         
@@ -127,13 +129,13 @@ def build_preprocessor(X):
     "preprocessor for adult dataset"
     # Identify column types
     cat_cols = [
-        "workclass",
-        "marital_status",
-        "relationship",
-        "race",
-        "sex",
-        "native_country",
-    ]
+    "workclass",
+    "marital_status",
+    "relationship",
+    "race",
+    "native_country",
+]
+    onehot_cols = ["sex"]
     num_cols = [
         "age",
         "education_num",
@@ -152,11 +154,19 @@ def build_preprocessor(X):
             ),
         ]
     )
+    
+    onehot_pipeline = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+        ]
+    )
+    
 
     num_pipeline = Pipeline([("imputer", SimpleImputer(strategy="mean"))])
 
     preprocessor = ColumnTransformer(
-        [("num", num_pipeline, num_cols), ("cat", cat_pipeline, cat_cols)]
+        [("num", num_pipeline, num_cols), ("cat", cat_pipeline, cat_cols), ("onehot", onehot_pipeline, onehot_cols)]
     )
 
     return preprocessor

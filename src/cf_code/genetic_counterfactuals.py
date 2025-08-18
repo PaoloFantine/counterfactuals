@@ -21,14 +21,28 @@ class GA_counterfactuals:
         The outcome of the dataset. This should be the same outcome used to train the model or a series with the same format
     model:
         a model with a scikit-learn compatible .fit, .predict and .predict_proba methods
+    one_hot_encoded: list(str)
+            prefixes of one-hot encoded features to guarantee co-mutation
+            e.g. if one-hot encoded features are "cat__A", "cat__B", "cat__C", then one_hot_encoded=["cat__"]
+            will guarantee that if "cat__A" is mutated, then "cat__B" and "cat__C" will
+            be mutated as well, so that the one-hot encoding is preserved
     """
 
-    def __init__(self, X, y, model):
+    def __init__(self, X, y, model, one_hot_encoded=None):
 
         self.y = y
         self.X = X
         self.model = model
         self.features = self.X.columns
+        
+        if one_hot_encoded is not None:
+            self.one_hot_encoded = [
+                col for col in self.X.columns if col.startswith(tuple(one_hot_encoded))
+            ]
+        else:
+            self.one_hot_encoded = []
+            
+        self._ohe_prefixes = one_hot_encoded
         
         if self.y is None:
             if hasattr(model, "predict_proba"):
@@ -91,13 +105,13 @@ class GA_counterfactuals:
         # Dataframe to track found solutions
         solutions = pd.DataFrame(columns=list(self.X.columns) + ["outcome"])
         
-        while len(solutions) < n_counterfactuals+0.5*n_counterfactuals:  # finding more counterfactuals than needed to allow for selection of the fittest ones     
+        while len(solutions) < 2*n_counterfactuals:  # finding more counterfactuals than needed to allow for selection of the fittest ones     
             # -- evaluate parents fitness
             if self.problem_type == "classification":
-                parents['outcome'] = self.model.predict_proba(parents)[:, desired_class]
+                parents['outcome'] = self.model.predict_proba(parents[self.X.columns])[:, desired_class]
                 selected_parents = parents[parents['outcome'] > 0.5]
             elif self.problem_type == "regression":
-                parents['outcome'] = self.model.predict(parents)
+                parents['outcome'] = self.model.predict(parents[self.X.columns])
                 selected_parents = parents[
                     (parents['outcome'] >= lower_limit) & (parents['outcome'] <= upper_limit)
                 ]
@@ -131,24 +145,35 @@ class GA_counterfactuals:
         
             # -- reproduction
             for idx1, idx2 in couples:
-                parent1 = current_generation[self.X.columns].iloc[idx1]
-                parent2 = current_generation[self.X.columns].iloc[idx2]
-            
+                parent1 = current_generation[self.X.columns].iloc[[idx1]].copy()
+                parent2 = current_generation[self.X.columns].iloc[[idx2]].copy()
+
                 child = pd.DataFrame(index=[0], columns=self.X.columns)
             
                 for col in self.X.columns:
-                    if parent1[col].dtype in ["int64", "int32", "object", "category"]:
+                    if parent1[col].dtype in ["int64", "int32", "object", "category"] and col not in self.one_hot_encoded:
                         # for categorical or int values, choose the value of one of the parents
                         # with equal probability
                         child[col] = npr.choice(
-                            [parent1[col], parent2[col]], 1, p=[0.5, 0.5]
+                            [parent1[col].values[0], parent2[col].values[0]], 1, p=[0.5, 0.5]
                         )
                     
                     elif parent1[col].dtype in ["float64", "float32"]:
                         # for float values, choose the average of the parents
-                        child[col] = (parent1[col] + parent2[col]) / 2
+                        child[col] = (parent1[col].values[0] + parent2[col].values[0]) / 2
                     
+                # for one-hot encoded columns, choose one of the parents' beforehand and assign
+                # the whole array of one-hot encoded values to the child. This ensure co-mutation
+                for prefix in self._ohe_prefixes:
+                    ohe_parent = npr.choice(["parent1", "parent2"], 1, p=[0.5, 0.5])[0]
+                    ohe_cols = [col for col in self.X.columns if col.startswith(prefix)]
+                    for col in ohe_cols:
+                        if ohe_parent == "parent1":
+                            child[col] = parent1[col].values[0]
+                        else:
+                            child[col] = parent2[col].values[0]
             
+                
                 # append the child to the list of children and allow for mutation to explore the feature space better       
                 children.append(self._data_mutation(child, self.features_to_vary))
             
@@ -184,7 +209,9 @@ class GA_counterfactuals:
         """
         gene_dict = dict(to_be_mutated)
         
-        for col in features_to_vary:
+        regular_features = [col for col in features_to_vary if col not in self.one_hot_encoded]
+        
+        for col in regular_features:
             if self.X[col].dtype == "float": #numerical features
                 
                 # choose a random value from the distribution of the feature
@@ -201,8 +228,29 @@ class GA_counterfactuals:
                 ]:
                     # choose one of the available int/categorical values
                     res = list(self.X[col])
+                    
+            mutation = npr.choice(res, 1)
 
-            gene_dict[col] = npr.choice(res, 1)
+            # 20% chance to mutate the feature
+            gene_dict[col] = npr.choice([mutation[0], gene_dict[col][0]], 1, p=[0.2, 0.8])
+            
+        # co-mutate one-hot encoded features
+        for prefix in self._ohe_prefixes:
+            ohe_cols = [col for col in self.X.columns if col.startswith(prefix)]
+            res = list(self.X[ohe_cols].values)
+            
+            mutation_idx = npr.choice(range(len(res)), 1)[0]
+            
+            mutation_choice = npr.choice([True, False], 1, p=[0.2, 0.8])[0]
+            
+            for i, col in enumerate(ohe_cols):
+                if mutation_choice:
+                    gene_dict[col] = res[mutation_idx][i]
+                else:
+                    continue
+                
+            
+            
             
         gene_val = list(gene_dict.values())[0]
         
@@ -234,7 +282,7 @@ class GA_counterfactuals:
         # -- check the amount of features changed is minimal
         # len(self.X.columns) - count of features that have changed gives higher fitness for solutions that have changed the least features
         current_generation["sparsity_fitness"] = len(self.X.columns) - current_generation[self.X.columns].apply(
-            lambda x: list(np.not_equal(x.values, self.base.values)[0]).count(
+            lambda x: list(np.not_equal(x.values, self.base[self.X.columns].values)[0]).count(
                 True
             ),
             axis=1,
@@ -244,7 +292,7 @@ class GA_counterfactuals:
         # -- check how close the mutated instance is to the base instance
         # 1 - gower distance to have higher fitness for solutions that are closer to the base instance
         base_current = pd.concat([self.base, current_generation[self.X.columns]], axis=0, ignore_index=True)
-        current_generation["closeness_fitness"] = 1 - gower.gower_matrix(base_current)[0, 1:].mean()
+        current_generation["closeness_fitness"] = 1 - gower.gower_matrix(base_current[self.X.columns])[0, 1:].mean()
         
         return current_generation.reset_index(drop=True)
     
