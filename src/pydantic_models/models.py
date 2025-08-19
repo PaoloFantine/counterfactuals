@@ -81,11 +81,6 @@ class Workclass(str, Enum):
     never_worked = "Never-worked"
 
 
-class Sex(str, Enum):
-    male = "Male"
-    female = "Female"
-
-
 class Race(str, Enum):
     white = "White"
     black = "Black"
@@ -147,7 +142,8 @@ class ClassificationInput(BaseModel):
     marital_status: MaritalStatus
     relationship: Relationship
     workclass: Workclass
-    sex: Sex
+    sex_Male: int
+    sex_Female: int
     race: Race
     native_country: NativeCountry
     outcome: float

@@ -68,7 +68,7 @@ async def classification_counterfactuals(request: ClassificationCounterfactualRe
         method=method,
         n_counterfactuals=n_counterfactuals,
         fix_vars=fix_vars,
-        desired_outcome=desired_outcome,
+        desired_class=desired_outcome,
         one_hot_encoded=['sex_']
     )
 

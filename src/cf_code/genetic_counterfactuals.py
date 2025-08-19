@@ -187,6 +187,19 @@ class GA_counterfactuals:
         )
         
         solutions = solutions.nlargest(n_counterfactuals, "selection_probability")
+        
+        # give the solutions the desired outcome probability corrected by the desired class
+        # this way, class 0 will always show outcomes <0.5
+        # class one will have 0.5< outcome< 1
+        # class 2, if present, will have 1.5 < outcome < 2 and so on
+        if self.problem_type == "classification":
+            probs = self.model.predict_proba(solutions[self.X.columns])
+            if desired_class == 0:
+                solutions['outcome'] = probs[:, 1]
+            elif desired_class == 1:
+                solutions['outcome'] = probs[:, 1]
+            elif desired_class > 1:
+                solutions['outcome'] = desired_class + probs[:, desired_class]
             
         return solutions[list(self.X.columns)+["outcome"]].reset_index(drop=True)
     
