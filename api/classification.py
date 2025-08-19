@@ -62,6 +62,7 @@ async def classification_counterfactuals(request: ClassificationCounterfactualRe
     method = request.method
     fix_vars = request.fix_vars if request.fix_vars is not None else []
     desired_outcome = request.desired_outcome
+    one_hot_encoded = request.one_hot_encoded
 
     cf_df = cf.get_counterfactuals(
         instance_df,
@@ -69,7 +70,7 @@ async def classification_counterfactuals(request: ClassificationCounterfactualRe
         n_counterfactuals=n_counterfactuals,
         fix_vars=fix_vars,
         desired_class=desired_outcome,
-        one_hot_encoded=['sex_']
+        one_hot_encoded=one_hot_encoded
     )
 
     json_output = serialize_df_with_pydantic(cf_df)

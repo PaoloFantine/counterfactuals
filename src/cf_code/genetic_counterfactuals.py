@@ -312,7 +312,6 @@ class GA_counterfactuals:
     def _solution_fitness(
         self, 
         current_generation, 
-        desired_class=None, 
         lower_limit=None, 
         upper_limit=None
     ):
@@ -325,7 +324,7 @@ class GA_counterfactuals:
             # 'outcome' is the predicted probability of the desired class, so the probability is the fitness in this case
             outcome_fitness = current_generation['outcome']
         elif self.problem_type == "regression":
-            outcome_fitness = np.min(abs(current_generation['outcome'] - lower_limit), abs(upper_limit - current_generation['outcome']))
+            outcome_fitness = np.minimum(abs(current_generation['outcome'] - lower_limit), abs(upper_limit - current_generation['outcome']))
             
         return outcome_fitness
     

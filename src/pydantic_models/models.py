@@ -154,6 +154,7 @@ class ClassificationCounterfactualRequest(BaseModel):
     n_counterfactuals: Optional[int] = 3
     method: Literal["prototypes", "genetic"] = "genetic"
     fix_vars: Optional[List[str]] = None
+    one_hot_encoded: Optional[List[str]] = None
     desired_outcome: int
 
     @field_validator("fix_vars")
@@ -191,6 +192,7 @@ class RegressionCounterfactualRequest(BaseModel):
     n_counterfactuals: Optional[int] = 3
     method: Literal["prototypes", "genetic"] = "genetic"
     fix_vars: Optional[List[str]] = None
+    one_hot_encoded: Optional[List[str]] = None
     lower_limit: float
     upper_limit: float
 

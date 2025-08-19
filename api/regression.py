@@ -11,6 +11,7 @@ from src import (
     ModelInfo,
     RegressionCounterfactualRequest,
     RegressionMetrics,
+    load_dataset,
 )
 
 router = APIRouter(prefix="/regression", tags=["Regression"])
@@ -40,11 +41,10 @@ async def regression_metrics():
 
 @router.post("/counterfactuals/")
 async def regression_counterfactuals(request: RegressionCounterfactualRequest):
-    explainer_path = ARTIFACTS_DIR / "regression_explainer.pkl"
-    with open(explainer_path, "rb") as f:
-        explainer = joblib.load(f)
-
-    cf = Counterfactuals(explainer)
+    X, y = load_dataset("california_housing", preprocess=True)
+    model = joblib.load(ARTIFACTS_DIR / "xgboost_regressor.pkl")
+    
+    cf = Counterfactuals(X = X, y = y, model = model)
 
     instance_dict = request.instance.model_dump()
 
@@ -57,6 +57,7 @@ async def regression_counterfactuals(request: RegressionCounterfactualRequest):
         fix_vars=request.fix_vars,
         lower_limit=request.lower_limit,
         upper_limit=request.upper_limit,
+        one_hot_encoded=request.one_hot_encoded 
     )
 
     output = [regression_validate_and_serialize(row) for _, row in cf_df.iterrows()]
