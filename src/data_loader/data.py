@@ -8,7 +8,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.datasets import fetch_california_housing, fetch_openml
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 
 ARTIFACT_DIR = Path("artifacts")
 ARTIFACT_DIR.mkdir(exist_ok=True)
@@ -53,7 +53,7 @@ def load_dataset(name, preprocess=False, include_description=False):
     if name == "adult":
         ds = fetch_openml("adult", version=2, as_frame=True)
         print(ds.data.columns)
-        
+
         df = ds.data.copy()
         df.rename(
             columns={
@@ -94,7 +94,7 @@ def load_dataset(name, preprocess=False, include_description=False):
 
         if include_description:
             pprint(ADULT_COLUMN_DESCRIPTION)
-            
+
         # Ensure specified columns are of type int if they exist
         cols_to_int = [
             "education_num",
@@ -102,7 +102,7 @@ def load_dataset(name, preprocess=False, include_description=False):
         ]
         for col in cols_to_int:
             X_proc[col] = X_proc[col].astype(int)
-                
+
         # Convert columns to categorical
         cols_to_cat = [
             "workclass",
@@ -112,11 +112,11 @@ def load_dataset(name, preprocess=False, include_description=False):
             "sex_Female",
             "sex_Male",
             "native_country",
-            ]
-        
+        ]
+
         for col in cols_to_cat:
             X_proc[col] = X_proc[col].astype("category")
-                
+
         return result
     elif name == "california_housing":
         ds = fetch_california_housing(as_frame=True)
@@ -131,12 +131,12 @@ def build_preprocessor(X):
     "preprocessor for adult dataset"
     # Identify column types
     cat_cols = [
-    "workclass",
-    "marital_status",
-    "relationship",
-    "race",
-    "native_country",
-]
+        "workclass",
+        "marital_status",
+        "relationship",
+        "race",
+        "native_country",
+    ]
     onehot_cols = ["sex"]
     num_cols = [
         "age",
@@ -156,19 +156,22 @@ def build_preprocessor(X):
             ),
         ]
     )
-    
+
     onehot_pipeline = Pipeline(
         [
             ("imputer", SimpleImputer(strategy="most_frequent")),
             ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
         ]
     )
-    
 
     num_pipeline = Pipeline([("imputer", SimpleImputer(strategy="mean"))])
 
     preprocessor = ColumnTransformer(
-        [("num", num_pipeline, num_cols), ("cat", cat_pipeline, cat_cols), ("onehot", onehot_pipeline, onehot_cols)]
+        [
+            ("num", num_pipeline, num_cols),
+            ("cat", cat_pipeline, cat_cols),
+            ("onehot", onehot_pipeline, onehot_cols),
+        ]
     )
 
     return preprocessor

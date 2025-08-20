@@ -43,8 +43,8 @@ async def regression_metrics():
 async def regression_counterfactuals(request: RegressionCounterfactualRequest):
     X, y = load_dataset("california_housing", preprocess=True)
     model = joblib.load(ARTIFACTS_DIR / "xgboost_regressor.pkl")
-    
-    cf = Counterfactuals(X = X, y = y, model = model)
+
+    cf = Counterfactuals(X=X, y=y, model=model)
 
     instance_dict = request.instance.model_dump()
 
@@ -57,7 +57,7 @@ async def regression_counterfactuals(request: RegressionCounterfactualRequest):
         fix_vars=request.fix_vars,
         lower_limit=request.lower_limit,
         upper_limit=request.upper_limit,
-        one_hot_encoded=request.one_hot_encoded 
+        one_hot_encoded=request.one_hot_encoded,
     )
 
     output = [regression_validate_and_serialize(row) for _, row in cf_df.iterrows()]

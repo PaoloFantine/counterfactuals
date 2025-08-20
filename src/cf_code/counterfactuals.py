@@ -1,7 +1,4 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from ipywidgets import fixed, interact
 
 from src.cf_code import genetic_counterfactuals, prototypes
 
@@ -26,7 +23,7 @@ class Counterfactuals:
         self.X = X
         self.model = model
         self.features = self.X.columns
-        
+
         if self.y is None:
             if hasattr(model, "predict_proba"):
                 self.problem_type = "classification"
@@ -95,14 +92,16 @@ class Counterfactuals:
         if list(set(self.base_instance.columns) - set(self.X.columns)):
             self.outcome_column = list(
                 set(self.base_instance.columns) - set(self.X.columns)
-                )[0]
+            )[0]
         else:
             self.outcome_column = "outcome"
-            self.base_instance.loc[:, 'outcome'] = self.model.predict(self.base_instance)[0]
+            self.base_instance.loc[:, "outcome"] = self.model.predict(
+                self.base_instance
+            )[0]
 
         if (
-            (self.problem_type == "regression") and
-            (self.base_instance.iloc[0][self.outcome_column] >= self.lower_limit)
+            (self.problem_type == "regression")
+            and (self.base_instance.iloc[0][self.outcome_column] >= self.lower_limit)
             and (self.base_instance.iloc[0][self.outcome_column] <= self.upper_limit)
         ):
             raise ValueError(
@@ -116,10 +115,9 @@ class Counterfactuals:
 
         # generate counterfactuals using the chosen method
         if method == "genetic":
-            GA = genetic_counterfactuals.GA_counterfactuals(y=self.y, 
-                                                            X=self.X, 
-                                                            model=self.model, 
-                                                            one_hot_encoded=one_hot_encoded)
+            GA = genetic_counterfactuals.GA_counterfactuals(
+                y=self.y, X=self.X, model=self.model, one_hot_encoded=one_hot_encoded
+            )
 
             counterfactual_df = GA.generate_counterfactuals(
                 self.base_instance,
@@ -133,10 +131,11 @@ class Counterfactuals:
             return counterfactual_df
 
         elif method == "prototypes":
-            prototype = prototypes.Prototypes(y=self.y,
-                                              X=self.X,
-                                              model=self.model,
-                                              )
+            prototype = prototypes.Prototypes(
+                y=self.y,
+                X=self.X,
+                model=self.model,
+            )
 
             counterfactual = prototype.get_prototypes(
                 self.base_instance,

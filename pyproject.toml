@@ -20,4 +20,5 @@ dependencies = [
     "pydantic",
     "debugpy>=1.8.15",
     "gower>=0.1.2",
+    "pre-commit>=4.3.0",
 ]

@@ -41,7 +41,7 @@ async def classification_report():
 
 @router.post("/counterfactuals/")
 async def classification_counterfactuals(request: ClassificationCounterfactualRequest):
-    
+
     _, X_proc, y = load_dataset("adult", preprocess=True)
     model = joblib.load(ARTIFACTS_DIR / "classification_model.pkl")
 
@@ -70,7 +70,7 @@ async def classification_counterfactuals(request: ClassificationCounterfactualRe
         n_counterfactuals=n_counterfactuals,
         fix_vars=fix_vars,
         desired_class=desired_outcome,
-        one_hot_encoded=one_hot_encoded
+        one_hot_encoded=one_hot_encoded,
     )
 
     json_output = serialize_df_with_pydantic(cf_df)

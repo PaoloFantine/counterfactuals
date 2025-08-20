@@ -25,9 +25,9 @@ class Prototypes:
 
         self.y = y
         self.X = X
-        
+
         self.features = self.X.columns
-        
+
         if self.y is None:
             if hasattr(model, "predict_proba"):
                 self.problem_type = "classification"
@@ -74,7 +74,7 @@ class Prototypes:
         distance_range: nonnegative float, optional
             Return approximate nearest neighbors; the kth returned value is guaranteed to be
             no further than (1+distance_range) times the distance to the real kth nearest neighbor.
-            It is advised to leave this value to default (4), as distances in k-dimensional space might just be weird 
+            It is advised to leave this value to default (4), as distances in k-dimensional space might just be weird
             for most humans to interpret.
         p: float, 1<=p<=infinity, optional
             Which Minkowski p-norm to use. 1 is the sum-of-absolute-values distance (“Manhattan” distance).
@@ -100,9 +100,7 @@ class Prototypes:
             )
 
         if self.problem_type == "classification" and desired_class is None:
-            raise ValueError(
-                "desired_class should be set for classification problems"
-            )
+            raise ValueError("desired_class should be set for classification problems")
 
         # Drop outcome column
         base_features = base.copy()[self.X.columns]
@@ -112,8 +110,7 @@ class Prototypes:
             raise ValueError(
                 f"'base' should be a single row, got {len(base_features.index)}"
             )
-            
-        
+
         if not hasattr(self, "kdtrees"):
             # initialize kdtrees dict
             self.kdtrees = {
@@ -122,17 +119,17 @@ class Prototypes:
                 )
             }
         elif desired_class not in self.kdtrees.keys():
-            # if desired_class is not in kdtrees dict, add it 
+            # if desired_class is not in kdtrees dict, add it
             self.kdtrees[desired_class] = self._kdtree(
                 base, desired_class, lower_limit, upper_limit, fix_vars
             )
-            
+
         # get kdtree, scaler and data for desired_class
         kd, scaler, data = self.kdtrees[desired_class]
-        
+
         # scale base features to search for nearest neighbors in the scaled space
         base_scaled = scaler.transform(base_features)
-        
+
         # query kdtree for k nearest neighbors
         if len(data.index) < k:
             idx = kd.query(
@@ -146,9 +143,9 @@ class Prototypes:
                 f"only {len(data.index)} counterfactuals found. k was set to {k}, returning available counterfactuals:"
             )
         else:
-            idx = kd.query(
-                base_scaled, k=k, eps=distance_range, p=p, workers=workers
-            )[1][0]
+            idx = kd.query(base_scaled, k=k, eps=distance_range, p=p, workers=workers)[
+                1
+            ][0]
 
         return data.iloc[idx]
 
@@ -184,7 +181,7 @@ class Prototypes:
         data_features = data.copy().drop("outcome", axis=1)
         # scale for computing distance evenly (not scaling might lead to high-scale features dominating the distance)
         scaler = MinMaxScaler()
-        if data_features.shape[0] > 0: # only scale if there is data to search from
+        if data_features.shape[0] > 0:  # only scale if there is data to search from
             scaler.fit(data_features)
             df_scaled = scaler.transform(data_features)
 

@@ -41,7 +41,7 @@ def train(test_size: float, random_state: int) -> None:
         use_label_encoder=False,
         eval_metric="logloss",
         random_state=random_state,
-        enable_categorical=True
+        enable_categorical=True,
     )
     clf.fit(X_train, y_train)
 
