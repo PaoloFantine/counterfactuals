@@ -86,13 +86,15 @@ There are two routers, one for `regression/` and one for `classification/`. They
     ```bash
     curl -X 'GET' \
     'http://127.0.0.1:8000/classification/model_info/' \
-    -H 'accept: application/json'```
+    -H 'accept: application/json'
+    ```
 
 **regression**
     ```bash
     curl -X 'GET' \
     'http://127.0.0.1:8000/regression/model_info/' \
-    -H 'accept: application/json'```
+    -H 'accept: application/json'
+    ```
 
 - `/report/` summarizing model training metrics
   example requests:
@@ -102,13 +104,15 @@ There are two routers, one for `regression/` and one for `classification/`. They
     ```bash
     curl -X 'GET' \
     'http://127.0.0.1:8000/classification/report/' \
-    -H 'accept: application/json'````
+    -H 'accept: application/json'
+    ````
 
 **regression**
     ```bash
     curl -X 'GET' \
     'http://127.0.0.1:8000/regression/report/' \
-    -H 'accept: application/json'```
+    -H 'accept: application/json'
+    ```
 
 ### POST endpoints
 
@@ -146,7 +150,8 @@ There are two routers, one for `regression/` and one for `classification/`. They
   "one_hot_encoded": [
     "string"
   ],
-  "desired_outcome": 0}'```
+  "desired_outcome": 0}'
+  ```
 
 **regression**
   ```bash
