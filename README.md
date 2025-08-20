@@ -80,34 +80,39 @@ There are two routers, one for `regression/` and one for `classification/`. They
 ### GET endpoints
 - `/model_info/` giving information about the data and the type of model showcased.
   example requests:
-  **classification**
-    `curl -X 'GET' \
+**classification**
+    ```bash
+    curl -X 'GET' \
     'http://127.0.0.1:8000/classification/model_info/' \
-    -H 'accept: application/json'`
+    -H 'accept: application/json'```
 
-  **regression**
-    `curl -X 'GET' \
+**regression**
+    ```bash
+    curl -X 'GET' \
     'http://127.0.0.1:8000/regression/model_info/' \
-    -H 'accept: application/json'`
+    -H 'accept: application/json'```
 
 - `/report/` summarizing model training metrics
   example requests:
-  **classification**
-    `curl -X 'GET' \
+**classification**
+    ```bash
+    curl -X 'GET' \
     'http://127.0.0.1:8000/classification/report/' \
-    -H 'accept: application/json'``
+    -H 'accept: application/json'````
 
-  **regression**
-    `curl -X 'GET' \
+**regression**
+    ```bash
+    curl -X 'GET' \
     'http://127.0.0.1:8000/regression/report/' \
-    -H 'accept: application/json'`
+    -H 'accept: application/json'```
 
 ### POST endpoints
 
 - `/counterfactuals/` generating the counterfactuals for a base instance
   example requests:
-  **classification**
-    `curl -X 'POST' \
+**classification**
+    ```bash
+    curl -X 'POST' \
   'http://127.0.0.1:8000/classification/counterfactuals/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
@@ -135,11 +140,11 @@ There are two routers, one for `regression/` and one for `classification/`. They
   "one_hot_encoded": [
     "string"
   ],
-  "desired_outcome": 0
-}'` 
+  "desired_outcome": 0}'```
 
 **regression**
-  `curl -X 'POST' \
+  ```bash
+  curl -X 'POST' \
   'http://127.0.0.1:8000/regression/counterfactuals/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
@@ -165,7 +170,7 @@ There are two routers, one for `regression/` and one for `classification/`. They
   ],
   "lower_limit": 0,
   "upper_limit": 0
-}'`
+}'```
 
 
 
