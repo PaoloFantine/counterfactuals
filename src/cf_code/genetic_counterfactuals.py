@@ -105,6 +105,8 @@ class GA_counterfactuals:
         # Dataframe to track found solutions
         solutions = pd.DataFrame(columns=list(self.X.columns) + ["outcome"])
         
+        count = 0
+        
         while len(solutions) < 2*n_counterfactuals:  # finding more counterfactuals than needed to allow for selection of the fittest ones     
             # -- evaluate parents fitness
             if self.problem_type == "classification":
@@ -122,6 +124,8 @@ class GA_counterfactuals:
                     solutions = selected_parents.copy()
                 else:
                     solutions = pd.concat([solutions, selected_parents], ignore_index=True)
+                    
+            counterfactuals_found = len(solutions)
             
             current_generation = self._evaluate_selection_probability(
                 parents=parents,
@@ -164,21 +168,29 @@ class GA_counterfactuals:
                     
                 # for one-hot encoded columns, choose one of the parents' beforehand and assign
                 # the whole array of one-hot encoded values to the child. This ensure co-mutation
-                for prefix in self._ohe_prefixes:
-                    ohe_parent = npr.choice(["parent1", "parent2"], 1, p=[0.5, 0.5])[0]
-                    ohe_cols = [col for col in self.X.columns if col.startswith(prefix)]
-                    for col in ohe_cols:
-                        if ohe_parent == "parent1":
-                            child[col] = parent1[col].values[0]
-                        else:
-                            child[col] = parent2[col].values[0]
+                if self._ohe_prefixes:
+                    for prefix in self._ohe_prefixes:
+                        ohe_parent = npr.choice(["parent1", "parent2"], 1, p=[0.5, 0.5])[0]
+                        ohe_cols = [col for col in self.X.columns if col.startswith(prefix)]
+                        for col in ohe_cols:
+                            if ohe_parent == "parent1":
+                                child[col] = parent1[col].values[0]
+                            else:
+                                child[col] = parent2[col].values[0]
             
                 
                 # append the child to the list of children and allow for mutation to explore the feature space better       
                 children.append(self._data_mutation(child, self.features_to_vary))
+                
+            count += 1
+            
+            if count % 10 == 0:
+                print(f"Generation {count}; counterfactuals found: {counterfactuals_found}/{n_counterfactuals}")
             
             parents = pd.concat(children, ignore_index=True)
             
+        print(f"Generation {count}; counterfactuals found: {counterfactuals_found}/{n_counterfactuals}")
+        
         solutions = self._evaluate_selection_probability(
             parents=solutions,
             desired_class=desired_class,
@@ -248,22 +260,20 @@ class GA_counterfactuals:
             gene_dict[col] = npr.choice([mutation[0], gene_dict[col][0]], 1, p=[0.2, 0.8])
             
         # co-mutate one-hot encoded features
-        for prefix in self._ohe_prefixes:
-            ohe_cols = [col for col in self.X.columns if col.startswith(prefix)]
-            res = list(self.X[ohe_cols].values)
+        if self._ohe_prefixes:
+            for prefix in self._ohe_prefixes:
+                ohe_cols = [col for col in self.X.columns if col.startswith(prefix)]
+                res = list(self.X[ohe_cols].values)
             
-            mutation_idx = npr.choice(range(len(res)), 1)[0]
+                mutation_idx = npr.choice(range(len(res)), 1)[0]
             
-            mutation_choice = npr.choice([True, False], 1, p=[0.2, 0.8])[0]
+                mutation_choice = npr.choice([True, False], 1, p=[0.2, 0.8])[0]
             
-            for i, col in enumerate(ohe_cols):
-                if mutation_choice:
-                    gene_dict[col] = res[mutation_idx][i]
-                else:
-                    continue
-                
-            
-            
+                for i, col in enumerate(ohe_cols):
+                    if mutation_choice:
+                        gene_dict[col] = res[mutation_idx][i]
+                    else:
+                        continue
             
         gene_val = list(gene_dict.values())[0]
         
@@ -282,7 +292,6 @@ class GA_counterfactuals:
         # -- verify how close we are to the desired solution
         current_generation['outcome_fitness'] = self._solution_fitness(
             current_generation, 
-            desired_class=desired_class, 
             lower_limit=lower_limit, 
             upper_limit=upper_limit
         )

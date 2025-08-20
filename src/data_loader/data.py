@@ -53,7 +53,9 @@ def load_dataset(name, preprocess=False, include_description=False):
     if name == "adult":
         ds = fetch_openml("adult", version=2, as_frame=True)
         print(ds.data.columns)
-        ds.data.rename(
+        
+        df = ds.data.copy()
+        df.rename(
             columns={
                 "marital-status": "marital_status",
                 "native-country": "native_country",
@@ -65,7 +67,7 @@ def load_dataset(name, preprocess=False, include_description=False):
             inplace=True,
         )
 
-        X, y = ds.data, (ds.target == ">50K").astype(int)
+        X, y = df, (ds.target == ">50K").astype(int)
         if preprocess:
             X_clean = X.copy().drop(columns=ADULT_DROP_COLUMNS, errors="ignore")
             preprocessor = build_preprocessor(X_clean)
