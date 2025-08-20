@@ -1,4 +1,5 @@
 # counterfactuals
+Counterfactual explanations made simple: prototype search & genetic algorithm-based methods for interpretable ML
 
 A Python toolkit for generating interpretable counterfactual explanations for both classification and regression models.
 Built on top of scikit-learn compatible models and the explainerdashboard package, this project enables model interpretability and counterfactual prototype search as well as genetic algorithm-based explanations.
@@ -7,18 +8,23 @@ A demo of the functionality can be found in `notebooks/basic_demo.ipynb`
 
 ## Features
 
-- Prototype-based counterfactual search using KDTree - looking for data instances close to the examined one in feature space that show the desired behavior
+- **Prototype-based counterfactual search** using KDTree - looking for data instances close to the examined one in feature space that show the desired behavior
 
-- Genetic algorithm counterfactual generation for actionable, realistic changes - Nondominated Sorting Genetic Algorithm II (NSGA-II) with multi-objective optimization [https://www.cse.unr.edu/~sushil/class/gas/papers/nsga2.pdf](https://www.cse.unr.edu/~sushil/class/gas/papers/nsga2.pdf), [https://arxiv.org/pdf/2004.11165](https://arxiv.org/pdf/2004.11165)
+- **Genetic algorithm counterfactual generation** for actionable, realistic changes - Nondominated Sorting Genetic Algorithm II (NSGA-II) with multi-objective optimization [https://www.cse.unr.edu/~sushil/class/gas/papers/nsga2.pdf](https://www.cse.unr.edu/~sushil/class/gas/papers/nsga2.pdf), [https://arxiv.org/pdf/2004.11165](https://arxiv.org/pdf/2004.11165)
 
-- Support for both (multiclass) classification and regression tasks
+- Support for both (multiclass) **classification and regression** tasks
 
 - Utility scripts for loading sample datasets, training models, and saving sample artifacts
 
-- Local API to showcase an example on how to serve counterfactuals interactively
+- **Local API** to showcase an example on how to serve counterfactuals interactively
 
 ## Getting started
 
+0. Clone the repo:
+```sh
+git clone git@github.com:PaoloFantine/counterfactuals.git
+cd counterfactuals
+```
 Dependencies are managed using uv.
 
 The `pyproject.toml` contains all the needed dependencies. For development and runnning the code, using a virtual environment is recommended.
@@ -37,7 +43,9 @@ uv lock
 uv sync --locked --active
 ```
 
-## Usage
+3. Check out the demo at `./notebooks/basic_demo.ipynb`
+
+## API Usage
 
 One can test and play around with the code in a jupyter notebook. A demo of the package functionality can be found in `./notebooks/basic_demo.ipynb` 
 
@@ -65,6 +73,101 @@ In order to ensure the necessary artifacts are available for the API, one could 
 bash API_start.sh
 ```
 
+Once the API is started locally, one can checkout the docs at `http://127.0.0.1:8000/docs#` for schemas and sample requests.
+
+There are two routers, one for `regression/` and one for `classification/`. They basically contain the same endpoints.
+
+### GET endpoints
+- `/model_info/` giving information about the data and the type of model showcased.
+  example requests:
+  **classification**
+    `curl -X 'GET' \
+    'http://127.0.0.1:8000/classification/model_info/' \
+    -H 'accept: application/json'`
+
+  **regression**
+    `curl -X 'GET' \
+    'http://127.0.0.1:8000/regression/model_info/' \
+    -H 'accept: application/json'`
+
+- `/report/` summarizing model training metrics
+  example requests:
+  **classification**
+    `curl -X 'GET' \
+    'http://127.0.0.1:8000/classification/report/' \
+    -H 'accept: application/json'``
+
+  **regression**
+    `curl -X 'GET' \
+    'http://127.0.0.1:8000/regression/report/' \
+    -H 'accept: application/json'`
+
+### POST endpoints
+
+- `/counterfactuals/` generating the counterfactuals for a base instance
+  example requests:
+  **classification**
+    `curl -X 'POST' \
+  'http://127.0.0.1:8000/classification/counterfactuals/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "instance": {
+    "age": 0,
+    "education_num": 0,
+    "capital_gain": 0,
+    "capital_loss": 0,
+    "hours_per_week": 0,
+    "marital_status": "Married-civ-spouse",
+    "relationship": "Husband",
+    "workclass": "Private",
+    "sex_Male": 0,
+    "sex_Female": 0,
+    "race": "White",
+    "native_country": "United-States",
+    "outcome": 0
+  },
+  "n_counterfactuals": 3,
+  "method": "genetic",
+  "fix_vars": [
+    "string"
+  ],
+  "one_hot_encoded": [
+    "string"
+  ],
+  "desired_outcome": 0
+}'` 
+
+**regression**
+  `curl -X 'POST' \
+  'http://127.0.0.1:8000/regression/counterfactuals/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "instance": {
+    "MedInc": 0,
+    "HouseAge": 0,
+    "AveRooms": 0,
+    "AveBedrms": 0,
+    "Population": 0,
+    "AveOccup": 0,
+    "Latitude": 0,
+    "Longitude": 0,
+    "outcome": 0
+  },
+  "n_counterfactuals": 3,
+  "method": "genetic",
+  "fix_vars": [
+    "string"
+  ],
+  "one_hot_encoded": [
+    "string"
+  ],
+  "lower_limit": 0,
+  "upper_limit": 0
+}'`
+
+
 
 ## Project Structure
 
@@ -88,7 +191,8 @@ bash API_start.sh
 
 The code in this repository was developed as a learning project. It is not intended to be used in any real application and it does not come with any guarantee that it will work every time.
 Testing was done based on some examples and it works well based on those, though some generalization has been strived for.
-I am aware of improvements that can be done. Specifically: 
+I am aware of improvements that can be done. Specifically:
+- the API isn't hosted anywhere, it is only a sample structure 
 - unit testing is currently missing as well as some type hinting within the code
 - logging could be added in order to report on what is going on under the hood and where the algorithms most spend their time on
 - a user interface or at the very least, some plotting capability to allow visualization of the counterfactuals would be nice to have

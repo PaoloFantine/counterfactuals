@@ -21,7 +21,7 @@ ARTIFACTS_DIR = Path("artifacts")
 
 # Regression endpoints
 @router.get("/model_info/")
-async def regression_model_info(request: RegressionCounterfactualRequest):
+async def regression_model_info():
     return ModelInfo(
         model_type="regression",
         algorithm="XGBoostRegressor",
@@ -31,7 +31,7 @@ async def regression_model_info(request: RegressionCounterfactualRequest):
     )
 
 
-@router.get("/metrics/")
+@router.get("/report/")
 async def regression_metrics():
     metrics_path = ARTIFACTS_DIR / "regression_report.json"
     with open(metrics_path, "r") as f:
