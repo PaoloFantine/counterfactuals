@@ -186,6 +186,8 @@ class GA_counterfactuals:
             
             if count % 10 == 0:
                 print(f"Generation {count}; counterfactuals found: {counterfactuals_found}/{n_counterfactuals}")
+                if counterfactuals_found==n_counterfactuals: # if there are enough counterfactuals after 10+ generations, stop looking
+                    break
             
             parents = pd.concat(children, ignore_index=True)
             
@@ -314,6 +316,11 @@ class GA_counterfactuals:
         # -- check how close the mutated instance is to the base instance
         # 1 - gower distance to have higher fitness for solutions that are closer to the base instance
         base_current = pd.concat([self.base, current_generation[self.X.columns]], axis=0, ignore_index=True)
+        
+        # convert "category" columns to "object" to avoid gower distance errors
+        for col in base_current.select_dtypes(include=["category"]).columns:
+            base_current[col] = base_current[col].astype("object")
+        
         current_generation["closeness_fitness"] = 1 - gower.gower_matrix(base_current[self.X.columns])[0, 1:].mean()
         
         return current_generation.reset_index(drop=True)
