@@ -80,6 +80,8 @@ There are two routers, one for `regression/` and one for `classification/`. They
 ### GET endpoints
 - `/model_info/` giving information about the data and the type of model showcased.
   example requests:
+
+
 **classification**
     ```bash
     curl -X 'GET' \
@@ -94,6 +96,8 @@ There are two routers, one for `regression/` and one for `classification/`. They
 
 - `/report/` summarizing model training metrics
   example requests:
+
+
 **classification**
     ```bash
     curl -X 'GET' \
@@ -110,6 +114,8 @@ There are two routers, one for `regression/` and one for `classification/`. They
 
 - `/counterfactuals/` generating the counterfactuals for a base instance
   example requests:
+
+
 **classification**
     ```bash
     curl -X 'POST' \
@@ -173,7 +179,6 @@ There are two routers, one for `regression/` and one for `classification/`. They
 }'```
 
 
-
 ## Project Structure
 
 ```text
@@ -184,7 +189,7 @@ There are two routers, one for `regression/` and one for `classification/`. They
 |-src/ # main code repository
 |--cf_code/ # code to generate counterfactuals
 |--data_loader/ # code to load the demo data from scikit-learn
-|--model_training_scripts/ # code to train demo classification and regression models
+|--model_training/ # code to train demo classification and regression models
 |--pydantic_models/ # models for the API
 |-API_start.sh # script to generate demo artifacts and start the API
 |-pyproject.toml # file listing the necessary dependencies of the package
