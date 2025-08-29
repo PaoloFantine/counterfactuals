@@ -1,0 +1,12 @@
+site_name: Counterfactuals Toolkit
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Overview: overview.md
+  - Getting Started: getting-started.md
+  - Usage: usage.md
+  - API Reference: api.md
+  - Project Structure: structure.md
+  
