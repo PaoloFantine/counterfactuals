@@ -21,4 +21,6 @@ dependencies = [
     "debugpy>=1.8.15",
     "gower>=0.1.2",
     "pre-commit>=4.3.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.18",
 ]
